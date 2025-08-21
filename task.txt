@@ -1,0 +1,22 @@
+Studi Kasus: To-Do List App dengan API
+
+Deskripsi:
+Buat aplikasi To-Do List yang terhubung dengan API Dummy (JSONPlaceholder) untuk melakukan CRUD (Create, Read, Update, Delete).
+
+Fitur yang harus ada:
+- Menampilkan daftar tugas dari API menggunakan FutureBuilder dan ListView.builder (Done)
+- Menambahkan tugas baru dengan TextField dan ElevatedButton
+- Menandai tugas sebagai selesai dengan Checkbox (mengirimkan PATCH request)
+- Menghapus tugas dari daftar (mengirimkan DELETE request)
+
+State Management: setState() atau Provider
+
+Teknologi yang digunakan:
+- HTTP package (http) untuk komunikasi dengan API
+- State Management: setState(), Provider, atau Riverpod
+- Widget Utama: Scaffold, ListView.builder, TextField, Checkbox, ElevatedButton
+
+Fitur Tambahan (Opsional):
+- Simpan data offline menggunakan SharedPreferences atau Hive
+- Tambahkan loading indicator saat data diambil dari API
+- Tambahkan fitur pencarian untuk mencari tugas berdasarkan nama
