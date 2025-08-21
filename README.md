@@ -37,21 +37,21 @@ Aplikasi ini dibangun menggunakan pendekatan **Clean Architecture** dengan **Pro
 ### 1. Daftar Tugas
 
 Menampilkan semua To-Do dari API.  
-![Todos](screenshot/todos.jpg)
+<img src="screenshot/todos.jpg" alt="Todos" width="300"/>
 
 ### 2. Menambahkan Tugas Baru
 
 Form input untuk menambahkan task baru.  
-![Add Todos](screenshot/add_todos.jpg)
+<img src="screenshot/add_todos.jpg" alt="Add Todos" width="300"/>
 
 ### 3. Loading State
 
 Loading indicator ketika data sedang diambil dari API.  
-![Loading](screenshot/loading.jpg)
+<img src="screenshot/loading.jpg" alt="Loading" width="300"/>
 
 ### 4. Fitur Pencarian
 
 Mencari To-Do berdasarkan title.  
-![Search](screenshot/search.jpg)
+<img src="screenshot/search.jpg" alt="Search" width="300"/>
 
 ---
