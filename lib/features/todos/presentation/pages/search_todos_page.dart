@@ -8,62 +8,121 @@ class SearchTodosPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<TodosProvider>();
-    final TextEditingController searchController = TextEditingController();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Search Todos")),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: searchController,
-              onChanged: (value) {
-                provider.searchTodos(value);
-              },
-              decoration: const InputDecoration(
-                hintText: "Search todo...",
-                prefixIcon: Icon(Icons.search),
-              ),
+    return PopScope(
+      canPop: true, // biar tetep bisa back
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          context.read<TodosProvider>().clearSearch();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: TextField(
+            decoration: const InputDecoration(
+              hintText: "Search todos...",
+              border: InputBorder.none,
             ),
+            onChanged: (query) {
+              debugPrint('query is empty ${query.length}');
+              if (query.isEmpty) {
+                provider.clearSearch(); // <-- tambahin method ini di provider
+              } else {
+                provider.searchTodosDebounced(query);
+              }
+            },
           ),
-          Expanded(
-            child: Consumer<TodosProvider>(
-              builder: (context, provider, _) {
-                if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+        ),
+        body: Consumer<TodosProvider>(
+          builder: (context, provider, child) {
+            // kondisi awal (belum search)
+            if (provider.searchedTodos.isEmpty &&
+                provider.lastQuery.isEmpty &&
+                !provider.isInitialLoading) {
+              return _buildSuggestions(provider);
+            }
 
-                if (provider.searchedTodos.isEmpty) {
-                  return const Center(child: Text("No results found"));
-                }
+            if (provider.isInitialLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-                return ListView.builder(
-                  itemCount: provider.searchedTodos.length,
-                  itemBuilder: (context, index) {
-                    final todo = provider.searchedTodos[index];
-                    return ListTile(
-                      leading: Checkbox(
-                        value: todo.completed,
-                        onChanged: (value) async {
-                          await provider.patchTodo(todo.id, value ?? false);
-                        },
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          await provider.deleteTodo(todo.id);
-                        },
-                      ),
-                      title: Text(todo.title),
-                    );
-                  },
+            if (provider.error.isNotEmpty) {
+              return Center(child: Text("Error: ${provider.error}"));
+            }
+
+            if (provider.searchedTodos.isEmpty) {
+              return Center(
+                child: Text("No results for '${provider.lastQuery}'"),
+              );
+            }
+
+            // tampilkan hasil search
+            return ListView.builder(
+              itemCount: provider.searchedTodos.length,
+              itemBuilder: (context, index) {
+                final todo = provider.searchedTodos[index];
+                return ListTile(
+                  title: Text(todo.title ?? ""),
+                  leading: Checkbox(
+                    value: todo.completed,
+                    onChanged: (val) {
+                      provider.patchTodoOptimistic(todo.id!, val ?? false);
+                    },
+                  ),
                 );
               },
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  Widget _buildSuggestions(TodosProvider provider) {
+    final recent = provider.recentSearches; // simpan list recent di provider
+    final suggestions = ["delectus", "et porro", "voluptatem", "quis ut nam"];
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (recent.isNotEmpty) ...[
+          const Text(
+            "Recent searches",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Wrap(
+            spacing: 8,
+            children: recent
+                .map(
+                  (q) => ActionChip(
+                    label: Text(q),
+                    onPressed: () {
+                      provider.searchTodosDebounced(q);
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 20),
+        ],
+        const Text(
+          "Try searching for",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        Wrap(
+          spacing: 8,
+          children: suggestions
+              .map(
+                (q) => ActionChip(
+                  label: Text(q),
+                  onPressed: () {
+                    provider.searchTodosDebounced(q);
+                  },
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 }
