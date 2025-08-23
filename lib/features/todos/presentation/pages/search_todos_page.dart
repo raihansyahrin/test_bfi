@@ -10,7 +10,7 @@ class SearchTodosPage extends StatelessWidget {
     final provider = context.read<TodosProvider>();
 
     return PopScope(
-      canPop: true, // biar tetep bisa back
+      canPop: true, 
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
           context.read<TodosProvider>().clearSearch();
@@ -26,7 +26,7 @@ class SearchTodosPage extends StatelessWidget {
             onChanged: (query) {
               debugPrint('query is empty ${query.length}');
               if (query.isEmpty) {
-                provider.clearSearch(); // <-- tambahin method ini di provider
+                provider.clearSearch(); 
               } else {
                 provider.searchTodosDebounced(query);
               }
@@ -35,7 +35,7 @@ class SearchTodosPage extends StatelessWidget {
         ),
         body: Consumer<TodosProvider>(
           builder: (context, provider, child) {
-            // kondisi awal (belum search)
+            
             if (provider.searchedTodos.isEmpty &&
                 provider.lastQuery.isEmpty &&
                 !provider.isInitialLoading) {
@@ -56,7 +56,7 @@ class SearchTodosPage extends StatelessWidget {
               );
             }
 
-            // tampilkan hasil search
+            
             return ListView.builder(
               itemCount: provider.searchedTodos.length,
               itemBuilder: (context, index) {
@@ -79,7 +79,7 @@ class SearchTodosPage extends StatelessWidget {
   }
 
   Widget _buildSuggestions(TodosProvider provider) {
-    final recent = provider.recentSearches; // simpan list recent di provider
+    final recent = provider.recentSearches; 
     final suggestions = ["delectus", "et porro", "voluptatem", "quis ut nam"];
 
     return ListView(
