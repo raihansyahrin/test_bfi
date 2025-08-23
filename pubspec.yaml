@@ -15,6 +15,7 @@ dependencies:
   dartz: ^0.10.1
   get_it: ^8.2.0
   shared_preferences: ^2.5.3
+  pull_to_refresh_flutter3: ^2.0.2
 
 dev_dependencies:
   flutter_test:
