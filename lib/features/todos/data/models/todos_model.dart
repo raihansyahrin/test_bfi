@@ -1,4 +1,4 @@
-import 'package:test_bfi/features/todos/domain/entities/todos.dart';
+import 'package:test_bfi/features/todos/domain/entities/todos_entity.dart';
 
 class TodosModel extends TodosEntity {
   const TodosModel({
@@ -7,6 +7,8 @@ class TodosModel extends TodosEntity {
     required super.title,
     required super.completed,
   });
+  
+  @override
   TodosModel copyWith({int? userId, int? id, String? title, bool? completed}) =>
       TodosModel(
         userId: userId ?? this.userId,
