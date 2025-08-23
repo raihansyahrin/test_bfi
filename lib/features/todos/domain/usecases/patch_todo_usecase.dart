@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import 'package:test_bfi/features/todos/domain/entities/todos.dart';
+import 'package:test_bfi/features/todos/domain/entities/todos_entity.dart';
 import 'package:test_bfi/features/todos/domain/repositories/todos_repository.dart';
 
 class PatchTodoUsecase {
