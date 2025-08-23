@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
-import 'package:test_bfi/features/todos/data/datasources/lcoal/local_datasources.dart';
+import 'package:test_bfi/features/todos/data/datasources/local/local_datasources.dart';
 import 'package:test_bfi/features/todos/data/datasources/remote/remote_datasources.dart';
 import 'package:test_bfi/features/todos/data/repositories/todos_repository_impl.dart';
 import 'package:test_bfi/features/todos/domain/repositories/todos_repository.dart';
