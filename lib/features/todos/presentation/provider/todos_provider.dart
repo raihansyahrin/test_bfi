@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:test_bfi/features/todos/domain/entities/todos.dart';
+import 'package:pull_to_refresh_flutter3/pull_to_refresh_flutter3.dart';
+import 'package:test_bfi/features/todos/domain/entities/todos_entity.dart';
 import 'package:test_bfi/features/todos/domain/usecases/delete_todo_usecase.dart';
 import 'package:test_bfi/features/todos/domain/usecases/get_todos_usecase.dart';
 import 'package:test_bfi/features/todos/domain/usecases/patch_todo_usecase.dart';
@@ -22,29 +25,103 @@ class TodosProvider extends ChangeNotifier {
   List<TodosEntity> searchedTodos = [];
 
   String error = "";
-  bool isLoading = false;
+
+  bool isInitialLoading = false;
+  bool isMoreLoading = false;
+  bool isActionLoading = false;
+
   final TextEditingController postTextEditingController =
       TextEditingController();
+  final RefreshController refreshController = RefreshController();
 
-  /// Search todos by query (langsung dari todosEntity)
+  int _start = 0;
+  final int _limit = 20;
+
   void searchTodos(String query) {
     if (query.isEmpty) {
       searchedTodos = todosEntity;
     } else {
       searchedTodos = todosEntity
           .where(
-            (todo) => todo.title.toLowerCase().contains(query.toLowerCase()),
+            (todo) => todo.title!.toLowerCase().contains(query.toLowerCase()),
           )
           .toList();
     }
     notifyListeners();
   }
 
+  Timer? _debounce;
+  List<String> recentSearches = [];
+  String lastQuery = "";
+
+  void searchTodosDebounced(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      lastQuery = query;
+      if (query.isNotEmpty) {
+        recentSearches.insert(0, query);
+        if (recentSearches.length > 5) recentSearches.removeLast();
+      }
+      searchTodos(query);
+    });
+  }
+
+  void clearSearch() {
+    lastQuery = "";
+    searchedTodos = [];
+    notifyListeners();
+  }
+
+  Future<void> searchTodosFromApi(String query, {bool reset = true}) async {
+    if (reset) {
+      _start = 0;
+      searchedTodos = [];
+    }
+
+    isInitialLoading = reset;
+    isMoreLoading = !reset;
+
+    notifyListeners();
+
+    try {
+      final response = await getTodosUsecase.call(
+        start: _start,
+        limit: _limit,
+        query: query, // tambahin query title_like di usecase / repo
+      );
+
+      response.fold(
+        (l) {
+          error = l;
+          notifyListeners();
+        },
+        (r) {
+          if (reset) {
+            searchedTodos = r;
+          } else {
+            searchedTodos.addAll(r);
+          }
+          _start += _limit;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      error = e.toString();
+      notifyListeners();
+    } finally {
+      isInitialLoading = false;
+      isMoreLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<List<TodosEntity>> getTodos() async {
-    isLoading = true;
+    isInitialLoading = true;
+    _start = 0;
+
     notifyListeners();
     try {
-      final response = await getTodosUsecase.call();
+      final response = await getTodosUsecase.call(start: _start, limit: _limit);
       return response.fold(
         (l) {
           error = l;
@@ -53,7 +130,8 @@ class TodosProvider extends ChangeNotifier {
         },
         (r) {
           todosEntity = r;
-          searchedTodos = r; // awalnya tampilkan semua
+          // searchedTodos = r;
+          _start += _limit;
 
           notifyListeners();
           return r;
@@ -64,34 +142,46 @@ class TodosProvider extends ChangeNotifier {
       notifyListeners();
       return [];
     } finally {
-      isLoading = false;
+      isInitialLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> patchTodo(int id, bool completed) async {
-    isLoading = true;
+  Future<void> loadMoreTodos() async {
+    if (isMoreLoading) return;
+
+    isMoreLoading = true;
     notifyListeners();
+
     try {
-      final response = await patchTodoUsecase.call(id, completed);
-      response.fold((l) => error = l, (r) async {
-        // update di list
-        final index = todosEntity.indexWhere((t) => t.id == id);
-        if (index != -1) {
-          todosEntity[index] = r;
-        }
-        await getTodos();
-      });
+      final response = await getTodosUsecase.call(start: _start, limit: _limit);
+      response.fold(
+        (l) {
+          error = l;
+          notifyListeners();
+        },
+        (r) {
+          if (r.isEmpty) {
+            return;
+          }
+          todosEntity.addAll(r);
+          searchedTodos = todosEntity;
+          _start += _limit;
+
+          notifyListeners();
+        },
+      );
     } catch (e) {
       error = e.toString();
+      notifyListeners();
     } finally {
-      isLoading = false;
+      isMoreLoading = false;
       notifyListeners();
     }
   }
 
   Future<void> postTodo(String title) async {
-    isLoading = true;
+    isActionLoading = true;
     notifyListeners();
     try {
       final response = await postTodoUsecase.call(title);
@@ -99,27 +189,51 @@ class TodosProvider extends ChangeNotifier {
         await getTodos();
       });
     } catch (e) {
+      debugPrint('error post todo provider');
       error = e.toString();
     } finally {
-      isLoading = false;
+      isActionLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> deleteTodo(int id) async {
-    isLoading = true;
+  Future<void> patchTodoOptimistic(int id, bool completed) async {
+    final index = todosEntity.indexWhere((t) => t.id == id);
+    if (index == -1) return;
+
+    final oldTodo = todosEntity[index];
+
+    todosEntity[index] = oldTodo.copyWith(completed: completed);
     notifyListeners();
-    try {
-      final response = await deleteTodoUsecase.call(id);
-      response.fold((l) => error = l, (r) async {
-        todosEntity.removeWhere((t) => t.id == id);
-        await getTodos();
-      });
-    } catch (e) {
-      error = e.toString();
-    } finally {
-      isLoading = false;
+
+    final response = await patchTodoUsecase.call(id, completed);
+    response.fold(
+      (l) {
+        todosEntity[index] = oldTodo;
+        error = l;
+        notifyListeners();
+      },
+      (r) {
+        todosEntity[index] = r;
+        notifyListeners();
+      },
+    );
+  }
+
+  Future<void> deleteTodoOptimistic(int id) async {
+    final index = todosEntity.indexWhere((t) => t.id == id);
+    if (index == -1) return;
+
+    final oldTodo = todosEntity[index];
+
+    todosEntity.removeAt(index);
+    notifyListeners();
+
+    final response = await deleteTodoUsecase.call(id);
+    response.fold((l) {
+      todosEntity.insert(index, oldTodo);
+      error = l;
       notifyListeners();
-    }
+    }, (r) {});
   }
 }
